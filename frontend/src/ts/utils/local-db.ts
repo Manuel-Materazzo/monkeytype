@@ -1,15 +1,14 @@
-import { Snapshot, SnapshotResult } from "../constants/default-snapshot";
+import { Snapshot, SnapshotResult, getDefaultSnapshot } from "../constants/default-snapshot";
 import { Mode } from "@monkeytype/schemas/shared";
-import { getDefaultSnapshot } from "../constants/default-snapshot";
 
 const STORAGE_KEY = "monkeytype_local_snapshot";
 const STORAGE_VERSION = 1;
 
-export interface StorageSnapshot {
+export type StorageSnapshot = {
   version: number;
   data: Snapshot;
   lastSaved: number;
-}
+};
 
 export function saveSnapshotToLocalStorage(snapshot: Snapshot): void {
   try {
