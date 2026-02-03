@@ -35,6 +35,7 @@ import {
   get as getServerConfiguration,
 } from "./ape/server-configuration";
 import { Connection } from "@monkeytype/schemas/connections";
+import * as LocalDb from "./utils/local-db";
 
 let dbSnapshot: Snapshot | undefined;
 const firstDayOfTheWeek = getFirstDayOfTheWeek();
@@ -81,6 +82,10 @@ export function setSnapshot(
     dbSnapshot.lbOptOut = lbOptOut;
   }
 
+  if (dbSnapshot) {
+    LocalDb.saveSnapshotToLocalStorage(dbSnapshot);
+  }
+
   if (options?.dispatchEvent !== false) {
     AuthEvent.dispatch({ type: "snapshotUpdated", data: { isInitial: false } });
   }
@@ -92,7 +97,18 @@ export async function initSnapshot(): Promise<Snapshot | false> {
   await configurationPromise;
 
   try {
-    if (!isAuthenticated()) return false;
+    if (!isAuthenticated()) {
+      const localSnapshot = LocalDb.loadSnapshotFromLocalStorage();
+      if (localSnapshot) {
+        dbSnapshot = localSnapshot;
+        AuthEvent.dispatch({ type: "snapshotUpdated", data: { isInitial: true } });
+        return dbSnapshot;
+      }
+      const defaultLocalSnapshot = LocalDb.initializeLocalSnapshot();
+      dbSnapshot = defaultLocalSnapshot;
+      AuthEvent.dispatch({ type: "snapshotUpdated", data: { isInitial: true } });
+      return dbSnapshot;
+    }
 
     const connectionsRequest = getServerConfiguration()?.connections.enabled
       ? Ape.connections.get()
@@ -273,6 +289,7 @@ export async function initSnapshot(): Promise<Snapshot | false> {
     snap.connections = convertConnections(connectionsData);
 
     dbSnapshot = snap;
+    LocalDb.saveSnapshotToLocalStorage(dbSnapshot);
     return dbSnapshot;
   } catch (e) {
     dbSnapshot = getDefaultSnapshot();

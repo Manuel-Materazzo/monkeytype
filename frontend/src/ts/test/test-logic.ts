@@ -1166,8 +1166,14 @@ export async function finish(difficultyFailed = false): Promise<void> {
     // logged out
     void AnalyticsController.log("testCompletedNoLogin");
     if (!dontSave) {
-      // if its valid save it for later
-      notSignedInLastResult = completedEvent;
+      // if its valid save it locally
+      completedEvent.uid = "local_user";
+      savingResultPromise = saveResultLocally(completedEvent);
+      void savingResultPromise.then((response) => {
+        if (response) {
+          void AnalyticsController.log("testCompleted");
+        }
+      });
     }
     dontSave = true;
   }
@@ -1345,6 +1351,67 @@ async function saveResult(
   }
   DB.saveLocalResult(localDataToSave);
   return response;
+}
+
+async function saveResultLocally(
+  completedEvent: CompletedEvent,
+): Promise<boolean> {
+  AccountButton.loading(true);
+
+  if (!TestState.savingEnabled) {
+    Notifications.add("Result not saved: disabled by user", -1, {
+      duration: 3,
+      customTitle: "Notice",
+      important: true,
+    });
+    AccountButton.loading(false);
+    return false;
+  }
+
+  const result = structuredClone(completedEvent);
+
+  if (result.testDuration > 122) {
+    result.chartData = "toolong";
+    result.keySpacing = "toolong";
+    result.keyDuration = "toolong";
+  }
+  //@ts-expect-error just in case this is repeated and already has a hash
+  delete result.hash;
+  result.hash = objectHash(result);
+
+  try {
+    const snapshot = DB.getSnapshot();
+    if (!snapshot) {
+      Notifications.add("Failed to save result: no snapshot", -1);
+      AccountButton.loading(false);
+      return false;
+    }
+
+    const snapshotResult = structuredClone(
+      result,
+    ) as unknown as SnapshotResult<Mode>;
+    snapshotResult._id = `local_${Date.now()}_${Math.random()}`;
+
+    const localDataToSave: DB.SaveLocalResultData = {
+      result: snapshotResult,
+    };
+
+    DB.saveLocalResult(localDataToSave);
+
+    qs("#retrySavingResultButton")?.hide();
+    Notifications.add("Result saved locally", 1, {
+      duration: 3,
+      important: true,
+    });
+
+    AccountButton.loading(false);
+    return true;
+  } catch (e) {
+    console.error("Failed to save result locally", e);
+    Notifications.add("Failed to save result locally", -1);
+    AccountButton.loading(false);
+    return false;
+  }
 }
 
 export function fail(reason: string): void {
