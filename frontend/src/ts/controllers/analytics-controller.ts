@@ -13,6 +13,7 @@ export async function log(
   eventName: string,
   params?: Record<string, string>,
 ): Promise<void> {
+  if (!analytics) return;
   try {
     logEvent(analytics, eventName, params);
   } catch (e) {

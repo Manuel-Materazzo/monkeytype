@@ -162,7 +162,7 @@ export async function onAuthStateChanged(
     if (user) {
       userPromise = loadUser(user);
     } else {
-      DB.setSnapshot(undefined);
+      void DB.initSnapshot();
     }
   }
 
