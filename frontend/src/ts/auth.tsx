@@ -164,6 +164,8 @@ export async function onAuthStateChanged(
     } else {
       void DB.initSnapshot();
     }
+  } else {
+    void DB.initSnapshot();
   }
 
   if (!authInitialisedAndConnected || !user) {

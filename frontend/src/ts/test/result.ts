@@ -8,7 +8,7 @@ import * as DB from "../db";
 
 import { showLoaderBar, hideLoaderBar } from "../signals/loader-bar";
 import * as Notifications from "../elements/notifications";
-import { isAuthenticated } from "../firebase";
+import { isAuthenticated, isAuthAvailable } from "../firebase";
 import * as quoteRateModal from "../modals/quote-rate";
 import * as GlarsesMode from "../states/glarses-mode";
 import * as SlowTimer from "../states/slow-timer";
@@ -973,7 +973,7 @@ export async function update(
   qs("#words")?.removeClass("blurred");
   blurInputElement();
   qs("#result .stats .time .bottom .afk")?.setText("");
-  if (isAuthenticated()) {
+  if (isAuthenticated() || !isAuthAvailable()) {
     qs("#result .loginTip")?.hide();
   } else {
     qs("#result .loginTip")?.show();
@@ -1047,7 +1047,7 @@ export async function update(
   } else {
     qsa("main #result .stats")?.show();
     qs("main #result .chart")?.show();
-    if (!isAuthenticated()) {
+    if (!isAuthenticated() && isAuthAvailable()) {
       qs("main #result .loginTip")?.show();
       qs("main #result #rateQuoteButton")?.hide();
       qs("main #result #reportQuoteButton")?.hide();

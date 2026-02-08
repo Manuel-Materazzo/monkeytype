@@ -3,7 +3,7 @@ import {
   getHtmlByUserFlags,
   SupportsFlags,
 } from "../controllers/user-flag-controller";
-import { isAuthenticated } from "../firebase";
+import { isAuthenticated, isAuthAvailable } from "../firebase";
 import * as XpBar from "./xp-bar";
 import { getAvatarElement } from "../utils/discord-avatar";
 import * as AuthEvent from "../observables/auth-event";
@@ -49,7 +49,7 @@ export function updateAvatar(avatar?: {
 }
 
 export function update(): void {
-  if (isAuthenticated()) {
+  if (isAuthenticated() || !isAuthAvailable()) {
     const snapshot = getSnapshot();
 
     if (snapshot === undefined) return;

@@ -93,11 +93,7 @@ const routes: Route[] = [
   {
     path: "/account",
     load: async (_params, options) => {
-      if (!isAuthAvailable()) {
-        await navigate("/", options);
-        return;
-      }
-      if (!isAuthenticated()) {
+      if (isAuthAvailable() && !isAuthenticated()) {
         await navigate("/login", options);
         return;
       }
