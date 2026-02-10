@@ -6,20 +6,17 @@ import * as Notifications from "../elements/notifications";
 import * as Settings from "../pages/settings";
 import * as ThemePicker from "../elements/settings/theme-picker";
 import * as CustomText from "../test/custom-text";
-import { FirebaseError } from "firebase/app";
 import {
   isAuthenticated,
   getAuthenticatedUser,
   isAuthAvailable,
-} from "../firebase";
-import {
+  type User,
   EmailAuthProvider,
-  User,
   linkWithCredential,
   reauthenticateWithCredential,
   reauthenticateWithPopup,
-  unlink,
-} from "firebase/auth";
+  unlinkProvider,
+} from "../firebase";
 import {
   createErrorMessage,
   isDevEnvironment,
@@ -155,7 +152,7 @@ async function reauthenticate(
       user,
     };
   } catch (e) {
-    const typedError = e as FirebaseError;
+    const typedError = e as Error & { code?: string };
     if (typedError.code === "auth/wrong-password") {
       return {
         status: 0,
@@ -288,7 +285,7 @@ list.removeGoogleAuth = new SimpleModal({
     }
 
     try {
-      await unlink(reauth.user, "google.com");
+      await unlinkProvider(reauth.user, "google.com");
     } catch (e) {
       const message = createErrorMessage(e, "Failed to unlink Google account");
       return {
@@ -342,7 +339,7 @@ list.removeGithubAuth = new SimpleModal({
     }
 
     try {
-      await unlink(reauth.user, "github.com");
+      await unlinkProvider(reauth.user, "github.com");
     } catch (e) {
       const message = createErrorMessage(e, "Failed to unlink GitHub account");
       return {
@@ -394,7 +391,7 @@ list.removePasswordAuth = new SimpleModal({
     }
 
     try {
-      await unlink(reauth.user, "password");
+      await unlinkProvider(reauth.user, "password");
     } catch (e) {
       const message = createErrorMessage(
         e,

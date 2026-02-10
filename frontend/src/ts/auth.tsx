@@ -1,12 +1,5 @@
+import type { User as UserType, AuthProvider } from "./firebase";
 import { tryCatch } from "@monkeytype/util/trycatch";
-import {
-  GoogleAuthProvider,
-  GithubAuthProvider,
-  updateProfile,
-  linkWithPopup,
-  User as UserType,
-  AuthProvider,
-} from "firebase/auth";
 
 import Ape from "./ape";
 import Config, { applyConfig, saveFullConfigToLocalStorage } from "./config";
@@ -15,7 +8,6 @@ import * as DB from "./db";
 import * as Notifications from "./elements/notifications";
 import {
   isAuthAvailable,
-  getAuthenticatedUser,
   isAuthenticated,
   signOut as authSignOut,
   signInWithEmailAndPassword,
@@ -28,35 +20,19 @@ import { showPopup } from "./modals/simple-modals-base";
 import * as AuthEvent from "./observables/auth-event";
 import * as LoginPage from "./pages/login";
 import * as Sentry from "./sentry";
-import { showLoaderBar, hideLoaderBar } from "./signals/loader-bar";
 import * as ConnectionState from "./states/connection";
 import { addBanner } from "./stores/banners";
 import { getActiveFunboxesWithFunction } from "./test/funbox/list";
 import { qs, qsa } from "./utils/dom";
 import * as Misc from "./utils/misc";
 
-export const gmailProvider = new GoogleAuthProvider();
-export const githubProvider = new GithubAuthProvider();
+export const gmailProvider = { providerId: "google.com" } as AuthProvider;
+export const githubProvider = { providerId: "github.com" } as AuthProvider;
 
 async function sendVerificationEmail(): Promise<void> {
-  if (!isAuthAvailable()) {
-    Notifications.add("Authentication uninitialized", -1, {
-      duration: 3,
-    });
-    return;
-  }
-
-  showLoaderBar();
-  qs(".sendVerificationEmail")?.disable();
-  const response = await Ape.users.verificationEmail();
-  qs(".sendVerificationEmail")?.enable();
-  if (response.status !== 200) {
-    hideLoaderBar();
-    Notifications.add("Failed to request verification email", -1, { response });
-  } else {
-    hideLoaderBar();
-    Notifications.add("Verification email sent", 1);
-  }
+  Notifications.add("Authentication not available", -1, {
+    duration: 3,
+  });
 }
 
 async function getDataAndInit(): Promise<boolean> {
@@ -297,37 +273,12 @@ async function addGithubAuth(): Promise<void> {
 }
 
 async function addAuthProvider(
-  providerName: string,
-  provider: AuthProvider,
+  _providerName: string,
+  _provider: AuthProvider,
 ): Promise<void> {
-  if (!ConnectionState.get()) {
-    Notifications.add("You are offline", 0, {
-      duration: 2,
-    });
-    return;
-  }
-  if (!isAuthAvailable()) {
-    Notifications.add("Authentication uninitialized", -1, {
-      duration: 3,
-    });
-    return;
-  }
-  showLoaderBar();
-  const user = getAuthenticatedUser();
-  if (!user) return;
-  try {
-    await linkWithPopup(user, provider);
-    hideLoaderBar();
-    Notifications.add(`${providerName} authentication added`, 1);
-    AuthEvent.dispatch({ type: "authConfigUpdated" });
-  } catch (error) {
-    hideLoaderBar();
-    const message = Misc.createErrorMessage(
-      error,
-      `Failed to add ${providerName} authentication`,
-    );
-    Notifications.add(message, -1);
-  }
+  Notifications.add("Authentication not available", -1, {
+    duration: 3,
+  });
 }
 
 export function signOut(): void {
@@ -392,7 +343,6 @@ async function signUp(): Promise<void> {
       throw new Error(`Failed to sign in: ${signInResponse.body.message}`);
     }
 
-    await updateProfile(createdAuthUser.user, { displayName: nname });
     await sendVerificationEmail();
     LoginPage.hidePreloader();
     await onAuthStateChanged(true, createdAuthUser.user);

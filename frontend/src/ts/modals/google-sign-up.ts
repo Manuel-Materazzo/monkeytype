@@ -3,9 +3,10 @@ import * as Notifications from "../elements/notifications";
 import {
   sendEmailVerification,
   updateProfile,
-  UserCredential,
   getAdditionalUserInfo,
-} from "firebase/auth";
+  resetIgnoreAuthCallback,
+  type UserCredential,
+} from "../firebase";
 import Ape from "../ape";
 import { createErrorMessage } from "../utils/misc";
 import * as LoginPage from "../pages/login";
@@ -15,7 +16,6 @@ import * as CaptchaController from "../controllers/captcha-controller";
 import { showLoaderBar, hideLoaderBar } from "../signals/loader-bar";
 import { subscribe as subscribeToSignUpEvent } from "../observables/google-sign-up-event";
 import AnimatedModal from "../utils/animated-modal";
-import { resetIgnoreAuthCallback } from "../firebase";
 import { ValidatedHtmlInputElement } from "../elements/input-validation";
 import { UserNameSchema } from "@monkeytype/schemas/users";
 import { remoteValidation } from "../utils/remote-validation";
@@ -64,9 +64,6 @@ async function hide(): Promise<void> {
         LoginPage.enableInputs();
         if (getAdditionalUserInfo(signedInUser)?.isNewUser) {
           await Ape.users.delete();
-          await signedInUser?.user.delete().catch(() => {
-            //user might be deleted already by the server
-          });
         }
         AccountController.signOut();
         signedInUser = undefined;
@@ -126,9 +123,6 @@ async function apply(): Promise<void> {
     LoginPage.enableSignUpButton();
     if (signedInUser && getAdditionalUserInfo(signedInUser)?.isNewUser) {
       await Ape.users.delete();
-      await signedInUser?.user.delete().catch(() => {
-        //user might be deleted already by the server
-      });
     }
     AccountController.signOut();
     signedInUser = undefined;

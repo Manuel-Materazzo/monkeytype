@@ -1,15 +1,5 @@
-import Ape from "./ape";
 import * as Notifications from "./elements/notifications";
-import { isAuthenticated, getAuthenticatedUser } from "./firebase";
-import * as ConnectionState from "./states/connection";
-import { lastElementFromArray } from "./utils/arrays";
-import { migrateConfig } from "./utils/config";
-import * as Dates from "date-fns";
-import {
-  TestActivityCalendar,
-  ModifiableTestActivityCalendar,
-} from "./elements/test-activity-calendar";
-import { showLoaderBar, hideLoaderBar } from "./signals/loader-bar";
+import { TestActivityCalendar } from "./elements/test-activity-calendar";
 import { Badge, CustomTheme } from "@monkeytype/schemas/users";
 import { Config, Difficulty } from "@monkeytype/schemas/configs";
 import {
@@ -21,24 +11,16 @@ import {
 import {
   getDefaultSnapshot,
   Snapshot,
-  SnapshotPreset,
   SnapshotResult,
   SnapshotUserTag,
 } from "./constants/default-snapshot";
-import { getDefaultConfig } from "./constants/default-config";
 import { FunboxMetadata } from "../../../packages/funbox/src/types";
-import { getFirstDayOfTheWeek } from "./utils/date-and-time";
 import { Language } from "@monkeytype/schemas/languages";
 import * as AuthEvent from "./observables/auth-event";
-import {
-  configurationPromise,
-  get as getServerConfiguration,
-} from "./ape/server-configuration";
-import { Connection } from "@monkeytype/schemas/connections";
+import { configurationPromise } from "./ape/server-configuration";
 import * as LocalDb from "./utils/local-db";
 
 let dbSnapshot: Snapshot | undefined;
-const firstDayOfTheWeek = getFirstDayOfTheWeek();
 
 export class SnapshotInitError extends Error {
   constructor(
@@ -92,204 +74,21 @@ export function setSnapshot(
 }
 
 export async function initSnapshot(): Promise<Snapshot | false> {
-  //send api request with token that returns tags, presets, and data needed for snap
-  const snap = getDefaultSnapshot();
   await configurationPromise;
 
   try {
-    if (!isAuthenticated()) {
-      const localSnapshot = LocalDb.loadSnapshotFromLocalStorage();
-      if (localSnapshot) {
-        dbSnapshot = localSnapshot;
-        AuthEvent.dispatch({ type: "snapshotUpdated", data: { isInitial: true } });
-        return dbSnapshot;
-      }
-      const defaultLocalSnapshot = LocalDb.initializeLocalSnapshot();
-      dbSnapshot = defaultLocalSnapshot;
-      AuthEvent.dispatch({ type: "snapshotUpdated", data: { isInitial: true } });
+    const localSnapshot = LocalDb.loadSnapshotFromLocalStorage();
+    if (localSnapshot) {
+      dbSnapshot = localSnapshot;
+      AuthEvent.dispatch({
+        type: "snapshotUpdated",
+        data: { isInitial: true },
+      });
       return dbSnapshot;
     }
-
-    const connectionsRequest = getServerConfiguration()?.connections.enabled
-      ? Ape.connections.get()
-      : { status: 200, body: { message: "", data: [] } };
-
-    const [userResponse, configResponse, presetsResponse, connectionsResponse] =
-      await Promise.all([
-        Ape.users.get(),
-        Ape.configs.get(),
-        Ape.presets.get(),
-        connectionsRequest,
-      ]);
-
-    if (userResponse.status !== 200) {
-      throw new SnapshotInitError(
-        `${userResponse.body.message} (user)`,
-        userResponse.status,
-      );
-    }
-    if (configResponse.status !== 200) {
-      throw new SnapshotInitError(
-        `${configResponse.body.message} (config)`,
-        configResponse.status,
-      );
-    }
-    if (presetsResponse.status !== 200) {
-      throw new SnapshotInitError(
-        `${presetsResponse.body.message} (presets)`,
-        presetsResponse.status,
-      );
-    }
-    if (connectionsResponse.status !== 200) {
-      throw new SnapshotInitError(
-        `${connectionsResponse.body.message} (connections)`,
-        connectionsResponse.status,
-      );
-    }
-
-    const userData = userResponse.body.data;
-    const configData = configResponse.body.data;
-    const presetsData = presetsResponse.body.data;
-    const connectionsData = connectionsResponse.body.data;
-
-    if (userData === null) {
-      throw new SnapshotInitError(
-        `Request was successful but user data is null`,
-        200,
-      );
-    }
-
-    if (configData !== null && "config" in configData) {
-      throw new Error(
-        "Config data is not in the correct format. Please refresh the page or contact support.",
-      );
-    }
-
-    snap.name = userData.name;
-    snap.personalBests = userData.personalBests;
-    snap.personalBests ??= {
-      time: {},
-      words: {},
-      quote: {},
-      zen: {},
-      custom: {},
-    };
-
-    for (const mode of ["time", "words", "quote", "zen", "custom"]) {
-      snap.personalBests[mode as keyof PersonalBests] ??= {};
-    }
-
-    snap.banned = userData.banned;
-    snap.lbOptOut = userData.lbOptOut;
-    snap.verified = userData.verified;
-    snap.discordId = userData.discordId;
-    snap.discordAvatar = userData.discordAvatar;
-    snap.needsToChangeName = userData.needsToChangeName;
-    snap.typingStats = {
-      timeTyping: userData.timeTyping ?? 0,
-      startedTests: userData.startedTests ?? 0,
-      completedTests: userData.completedTests ?? 0,
-    };
-    snap.quoteMod = userData.quoteMod;
-    snap.favoriteQuotes = userData.favoriteQuotes ?? {};
-    snap.quoteRatings = userData.quoteRatings;
-    snap.details = userData.profileDetails;
-    snap.addedAt = userData.addedAt;
-    snap.inventory = userData.inventory;
-    snap.xp = userData.xp ?? 0;
-    snap.inboxUnreadSize = userData.inboxUnreadSize ?? 0;
-    snap.streak = userData?.streak?.length ?? 0;
-    snap.maxStreak = userData?.streak?.maxLength ?? 0;
-    snap.filterPresets = userData.resultFilterPresets ?? [];
-    snap.isPremium = userData?.isPremium ?? false;
-    snap.allTimeLbs = userData.allTimeLbs;
-
-    if (userData.testActivity !== undefined) {
-      snap.testActivity = new ModifiableTestActivityCalendar(
-        userData.testActivity.testsByDays,
-        new Date(userData.testActivity.lastDay),
-        firstDayOfTheWeek,
-      );
-    }
-
-    const hourOffset = userData?.streak?.hourOffset;
-    snap.streakHourOffset = hourOffset ?? undefined;
-
-    if (userData.lbMemory !== undefined) {
-      snap.lbMemory = userData.lbMemory;
-    }
-
-    if (configData === undefined || configData === null) {
-      snap.config = {
-        ...getDefaultConfig(),
-      };
-    } else {
-      snap.config = migrateConfig(configData);
-    }
-
-    snap.customThemes = userData.customThemes ?? [];
-
-    // const userDataTags: MonkeyTypes.UserTagWithDisplay[] = userData.tags ?? [];
-
-    // userDataTags.forEach((tag) => {
-    //   tag.display = tag.name.replaceAll("_", " ");
-    //   tag.personalBests ??= {
-    //     time: {},
-    //     words: {},
-    //     quote: {},
-    //     zen: {},
-    //     custom: {},
-    //   };
-
-    //   for (const mode of ["time", "words", "quote", "zen", "custom"]) {
-    //     tag.personalBests[mode as keyof PersonalBests] ??= {};
-    //   }
-    // });
-
-    // snap.tags = userDataTags;
-
-    snap.tags =
-      userData.tags?.map((tag) => ({
-        ...tag,
-        display: tag.name.replaceAll("_", " "),
-      })) ?? [];
-
-    snap.tags = snap.tags?.sort((a, b) => {
-      if (a.name > b.name) {
-        return 1;
-      } else if (a.name < b.name) {
-        return -1;
-      } else {
-        return 0;
-      }
-    });
-
-    if (presetsData !== undefined && presetsData !== null) {
-      const presetsWithDisplay = presetsData.map((preset) => {
-        return {
-          ...preset,
-          display: preset.name.replace(/_/gi, " "),
-        };
-      }) as SnapshotPreset[];
-      snap.presets = presetsWithDisplay;
-
-      snap.presets = snap.presets?.sort(
-        (a: SnapshotPreset, b: SnapshotPreset) => {
-          if (a.name > b.name) {
-            return 1;
-          } else if (a.name < b.name) {
-            return -1;
-          } else {
-            return 0;
-          }
-        },
-      );
-    }
-
-    snap.connections = convertConnections(connectionsData);
-
-    dbSnapshot = snap;
-    LocalDb.saveSnapshotToLocalStorage(dbSnapshot);
+    const defaultLocalSnapshot = LocalDb.initializeLocalSnapshot();
+    dbSnapshot = defaultLocalSnapshot;
+    AuthEvent.dispatch({ type: "snapshotUpdated", data: { isInitial: true } });
     return dbSnapshot;
   } catch (e) {
     dbSnapshot = getDefaultSnapshot();
@@ -298,61 +97,14 @@ export async function initSnapshot(): Promise<Snapshot | false> {
 }
 
 export async function getUserResults(offset?: number): Promise<boolean> {
-  if (!isAuthenticated()) return false;
-
   if (!dbSnapshot) return false;
   if (
     dbSnapshot.results !== undefined &&
     (offset === undefined || dbSnapshot.results.length > offset)
   ) {
-    return false;
+    return true;
   }
-
-  if (!ConnectionState.get()) {
-    return false;
-  }
-
-  const response = await Ape.results.get({ query: { offset } });
-
-  if (response.status !== 200) {
-    Notifications.add("Error getting results", -1, { response });
-    return false;
-  }
-
-  //another check in case user logs out while waiting for response
-  if (!isAuthenticated()) return false;
-
-  const results: SnapshotResult<Mode>[] = response.body.data.map((result) => {
-    result.bailedOut ??= false;
-    result.blindMode ??= false;
-    result.lazyMode ??= false;
-    result.difficulty ??= "normal";
-    result.funbox ??= [];
-    result.language ??= "english";
-    result.numbers ??= false;
-    result.punctuation ??= false;
-    result.numbers ??= false;
-    result.quoteLength ??= -1;
-    result.restartCount ??= 0;
-    result.incompleteTestSeconds ??= 0;
-    result.afkDuration ??= 0;
-    result.tags ??= [];
-    return result as SnapshotResult<Mode>;
-  });
-  results?.sort((a, b) => b.timestamp - a.timestamp);
-
-  if (dbSnapshot.results !== undefined && dbSnapshot.results.length > 0) {
-    //merge
-    const oldestTimestamp = lastElementFromArray(dbSnapshot.results)
-      ?.timestamp as number;
-    const resultsWithoutDuplicates = results.filter(
-      (it) => it.timestamp < oldestTimestamp,
-    );
-    dbSnapshot.results.push(...resultsWithoutDuplicates);
-  } else {
-    dbSnapshot.results = results;
-  }
-  return true;
+  return false;
 }
 
 function _getCustomThemeById(themeID: string): CustomTheme | undefined {
@@ -371,23 +123,13 @@ export async function addCustomTheme(
     return false;
   }
 
-  const response = await Ape.users.addCustomTheme({ body: { ...theme } });
-  if (response.status !== 200) {
-    Notifications.add("Error adding custom theme", -1, { response });
-    return false;
-  }
-
-  if (response.body.data === null) {
-    Notifications.add("Error adding custom theme: No data returned", -1);
-    return false;
-  }
-
   const newCustomTheme: CustomTheme = {
     ...theme,
-    _id: response.body.data._id,
+    _id: "local_" + Date.now() + "_" + Math.random(),
   };
 
   dbSnapshot.customThemes.push(newCustomTheme);
+  setSnapshot(dbSnapshot);
   return true;
 }
 
@@ -395,7 +137,6 @@ export async function editCustomTheme(
   themeId: string,
   newTheme: Omit<CustomTheme, "_id">,
 ): Promise<boolean> {
-  if (!isAuthenticated()) return false;
   if (!dbSnapshot) return false;
 
   dbSnapshot.customThemes ??= [];
@@ -409,14 +150,6 @@ export async function editCustomTheme(
     return false;
   }
 
-  const response = await Ape.users.editCustomTheme({
-    body: { themeId, theme: newTheme },
-  });
-  if (response.status !== 200) {
-    Notifications.add("Error editing custom theme", -1, { response });
-    return false;
-  }
-
   const newCustomTheme: CustomTheme = {
     ...newTheme,
     _id: themeId,
@@ -425,26 +158,21 @@ export async function editCustomTheme(
   dbSnapshot.customThemes[dbSnapshot.customThemes.indexOf(customTheme)] =
     newCustomTheme;
 
+  setSnapshot(dbSnapshot);
   return true;
 }
 
 export async function deleteCustomTheme(themeId: string): Promise<boolean> {
-  if (!isAuthenticated()) return false;
   if (!dbSnapshot) return false;
 
   const customTheme = dbSnapshot.customThemes?.find((t) => t._id === themeId);
   if (!customTheme) return false;
 
-  const response = await Ape.users.deleteCustomTheme({ body: { themeId } });
-  if (response.status !== 200) {
-    Notifications.add("Error deleting custom theme", -1, { response });
-    return false;
-  }
-
   dbSnapshot.customThemes = dbSnapshot.customThemes?.filter(
     (t) => t._id !== themeId,
   );
 
+  setSnapshot(dbSnapshot);
   return true;
 }
 
@@ -963,7 +691,7 @@ export async function updateLbMemory<M extends Mode>(
   mode2: Mode2<M>,
   language: Language,
   rank: number,
-  api = false,
+  _api = false,
 ): Promise<void> {
   if (mode === "time") {
     const timeMode = mode;
@@ -979,37 +707,18 @@ export async function updateLbMemory<M extends Mode>(
       "60": { english: 0 },
     };
     snapshot.lbMemory[timeMode][timeMode2] ??= {};
-    const current = snapshot.lbMemory?.[timeMode]?.[timeMode2]?.[language];
 
-    //this is protected above so not sure why it would be undefined
     const mem = snapshot.lbMemory[timeMode][timeMode2];
     mem[language] = rank;
-    if (api && current !== rank) {
-      await Ape.users.updateLeaderboardMemory({
-        body: { mode, mode2, language, rank },
-      });
-    }
     setSnapshot(snapshot);
   }
 }
 
-export async function saveConfig(config: Partial<Config>): Promise<void> {
-  if (isAuthenticated()) {
-    const response = await Ape.configs.save({ body: config });
-    if (response.status !== 200) {
-      Notifications.add("Failed to save config", -1, { response });
-    }
-  }
-}
+// oxlint-disable-next-line no-empty-function
+export async function saveConfig(_config: Partial<Config>): Promise<void> {}
 
-export async function resetConfig(): Promise<void> {
-  if (isAuthenticated()) {
-    const response = await Ape.configs.delete();
-    if (response.status !== 200) {
-      Notifications.add("Failed to reset config", -1, { response });
-    }
-  }
-}
+// oxlint-disable-next-line no-empty-function
+export async function resetConfig(): Promise<void> {}
 
 export type SaveLocalResultData = {
   xp?: number;
@@ -1023,8 +732,10 @@ export function saveLocalResult(data: SaveLocalResultData): void {
   if (!snapshot) return;
 
   if (data.result !== undefined) {
-    if (snapshot?.results !== undefined) {
+    if (snapshot.results !== undefined) {
       snapshot.results.unshift(data.result);
+    } else {
+      snapshot.results = [data.result];
     }
     if (snapshot.testActivity !== undefined) {
       snapshot.testActivity.increment(new Date(data.result.timestamp));
@@ -1112,7 +823,7 @@ export function addBadge(badge: Badge): void {
 export async function getTestActivityCalendar(
   yearString: string,
 ): Promise<TestActivityCalendar | undefined> {
-  if (!isAuthenticated() || dbSnapshot === undefined) return undefined;
+  if (dbSnapshot === undefined) return undefined;
 
   if (yearString === "current") return dbSnapshot.testActivity;
 
@@ -1121,81 +832,14 @@ export async function getTestActivityCalendar(
     return dbSnapshot.testActivity?.getFullYearCalendar();
   }
 
-  if (dbSnapshot.testActivityByYear === undefined) {
-    if (!ConnectionState.get()) {
-      return undefined;
-    }
-
-    showLoaderBar();
-    const response = await Ape.users.getTestActivity();
-    if (response.status !== 200) {
-      Notifications.add("Error getting test activities", -1, { response });
-      hideLoaderBar();
-      return undefined;
-    }
-
-    dbSnapshot.testActivityByYear = {};
-    for (const year in response.body.data) {
-      if (year === currentYear) continue;
-      const testsByDays = response.body.data[year] ?? [];
-      const lastDay = Dates.addDays(
-        new Date(parseInt(year), 0, 1),
-        testsByDays.length,
-      );
-
-      dbSnapshot.testActivityByYear[year] = new TestActivityCalendar(
-        testsByDays,
-        lastDay,
-        firstDayOfTheWeek,
-        true,
-      );
-    }
-    hideLoaderBar();
-  }
-
-  return dbSnapshot.testActivityByYear[yearString];
+  return dbSnapshot.testActivityByYear?.[yearString];
 }
 
-export function mergeConnections(connections: Connection[]): void {
-  const snapshot = getSnapshot();
-  if (!snapshot) return;
+// oxlint-disable-next-line no-empty-function
+export function mergeConnections(_connections: unknown[]): void {}
 
-  const update = convertConnections(connections);
-
-  for (const [key, value] of Object.entries(update)) {
-    snapshot.connections[key] = value;
-  }
-
-  setSnapshot(snapshot);
-}
-
-function convertConnections(
-  connectionsData: Connection[],
-): Snapshot["connections"] {
-  return Object.fromEntries(
-    connectionsData.map((connection) => {
-      const isMyRequest =
-        getAuthenticatedUser()?.uid === connection.initiatorUid;
-
-      return [
-        isMyRequest ? connection.receiverUid : connection.initiatorUid,
-        connection.status === "pending" && !isMyRequest
-          ? "incoming"
-          : connection.status,
-      ];
-    }),
-  );
-}
-
-export function isFriend(uid: string | undefined): boolean {
-  if (uid === undefined || uid === getAuthenticatedUser()?.uid) return false;
-
-  const snapshot = getSnapshot();
-  if (!snapshot) return false;
-
-  return Object.entries(snapshot.connections).some(
-    ([receiverUid, status]) => receiverUid === uid && status === "accepted",
-  );
+export function isFriend(_uid: string | undefined): boolean {
+  return false;
 }
 
 // export async function DB.getLocalTagPB(tagId) {

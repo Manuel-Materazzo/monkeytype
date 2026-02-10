@@ -93,7 +93,7 @@ export type SnapshotPreset = Preset & {
 };
 
 const defaultSnap = {
-  results: undefined,
+  results: [],
   personalBests: {
     time: {},
     words: {},

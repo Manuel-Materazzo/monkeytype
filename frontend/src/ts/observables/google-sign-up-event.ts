@@ -1,4 +1,4 @@
-import { UserCredential } from "firebase/auth";
+import type { UserCredential } from "../firebase";
 
 type SubscribeFunction = (
   signedInUser: UserCredential,
