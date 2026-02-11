@@ -55,6 +55,7 @@ import {
   isFunboxActiveWithProperty,
 } from "./funbox/list";
 import { getFunbox } from "@monkeytype/funbox";
+import { calculateXp } from "../utils/xp";
 import * as CompositionState from "../states/composition";
 import { SnapshotResult } from "../constants/default-snapshot";
 import { WordGenError } from "../utils/word-gen-error";
@@ -1371,11 +1372,25 @@ async function saveResultLocally(
     ) as unknown as SnapshotResult<Mode>;
     snapshotResult._id = `local_${Date.now()}_${Math.random()}`;
 
+    const snapxp = snapshot.xp ?? 0;
+
+    const lastResult = snapshot.results?.[0];
+    const lastResultTimestamp = lastResult?.timestamp ?? null;
+
+    const xpResult = calculateXp(result, snapxp, lastResultTimestamp);
+
     const localDataToSave: DB.SaveLocalResultData = {
       result: snapshotResult,
+      xp: xpResult.xp,
     };
 
     DB.saveLocalResult(localDataToSave);
+
+    void XPBar.update(
+      snapxp,
+      xpResult.xp,
+      TestState.resultVisible ? xpResult.breakdown : undefined,
+    );
 
     qs("#retrySavingResultButton")?.hide();
     AccountButton.loading(false);
