@@ -88,7 +88,6 @@ function getPlugins({
     versionFile({ clientVersion }),
     ViteMinifyPlugin(),
     VitePWA({
-      // injectRegister: "networkfirst",
       injectRegister: null,
       registerType: "autoUpdate",
       manifest: {
@@ -118,24 +117,23 @@ function getPlugins({
         clientsClaim: true,
         cleanupOutdatedCaches: true,
         globIgnores: ["**/.*"],
-        globPatterns: [],
-        navigateFallback: "",
+        globPatterns: ["**/*.{js,css,html,woff2,ico,png,svg,json,mp3,ogg}"],
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
+        navigateFallback: "/index.html",
         runtimeCaching: [
           {
-            urlPattern: (options) => {
-              const isApi = options.url.hostname === "api.monkeytype.com";
-              return options.sameOrigin && !isApi;
-            },
-            handler: "NetworkFirst",
-            options: {},
+            urlPattern: ({ url }) => url.pathname === "/version.json",
+            handler: "NetworkOnly",
           },
           {
-            urlPattern: (options) => {
-              //disable caching for version.json
-              return options.url.pathname === "/version.json";
+            urlPattern: ({ sameOrigin }) => sameOrigin,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "static-assets",
+              expiration: {
+                maxAgeSeconds: 30 * 24 * 60 * 60,
+              },
             },
-            handler: "NetworkOnly",
-            options: {},
           },
         ],
       },
