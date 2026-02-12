@@ -31,10 +31,17 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig(({ mode }): UserConfig => {
   const env = loadEnv(mode, process.cwd(), "");
   const useSentry = env["SENTRY"] !== undefined;
-  const isDevelopment = mode !== "production";
+  const isElectron = mode === "electron";
+  const isDevelopment = mode !== "production" && !isElectron;
 
   return {
-    plugins: getPlugins({ isDevelopment, useSentry: useSentry, env }),
+    base: "/",
+    plugins: getPlugins({
+      isDevelopment,
+      isElectron,
+      useSentry: useSentry,
+      env,
+    }),
     build: getBuildOptions({ enableSourceMaps: useSentry }),
     css: getCssOptions({ isDevelopment }),
     server: {
@@ -58,10 +65,12 @@ export default defineConfig(({ mode }): UserConfig => {
 
 function getPlugins({
   isDevelopment,
+  isElectron,
   env,
   useSentry,
 }: {
   isDevelopment: boolean;
+  isElectron: boolean;
   env: Record<string, string>;
   useSentry: boolean;
 }): PluginOption[] {
@@ -87,57 +96,59 @@ function getPlugins({
     fontawesomeSubset(),
     versionFile({ clientVersion }),
     ViteMinifyPlugin(),
-    VitePWA({
-      injectRegister: null,
-      registerType: "autoUpdate",
-      manifest: {
-        short_name: "Monkeytype",
-        name: "Monkeytype",
-        start_url: "/",
-        icons: [
-          {
-            src: "/images/icons/maskable_icon_x512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "maskable",
-          },
-          {
-            src: "/images/icons/general_icon_x512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "any",
-          },
-        ],
-        background_color: "#323437",
-        display: "standalone",
-        theme_color: "#323437",
-      },
-      manifestFilename: "manifest.json",
-      workbox: {
-        clientsClaim: true,
-        cleanupOutdatedCaches: true,
-        globIgnores: ["**/.*"],
-        globPatterns: ["**/*.{js,css,html,woff2,ico,png,svg,json,mp3,ogg}"],
-        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
-        navigateFallback: "/index.html",
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }) => url.pathname === "/version.json",
-            handler: "NetworkOnly",
-          },
-          {
-            urlPattern: ({ sameOrigin }) => sameOrigin,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "static-assets",
-              expiration: {
-                maxAgeSeconds: 30 * 24 * 60 * 60,
+    !isElectron
+      ? VitePWA({
+          injectRegister: null,
+          registerType: "autoUpdate",
+          manifest: {
+            short_name: "Monkeytype",
+            name: "Monkeytype",
+            start_url: "/",
+            icons: [
+              {
+                src: "/images/icons/maskable_icon_x512.png",
+                sizes: "512x512",
+                type: "image/png",
+                purpose: "maskable",
               },
-            },
+              {
+                src: "/images/icons/general_icon_x512.png",
+                sizes: "512x512",
+                type: "image/png",
+                purpose: "any",
+              },
+            ],
+            background_color: "#323437",
+            display: "standalone",
+            theme_color: "#323437",
           },
-        ],
-      },
-    }),
+          manifestFilename: "manifest.json",
+          workbox: {
+            clientsClaim: true,
+            cleanupOutdatedCaches: true,
+            globIgnores: ["**/.*"],
+            globPatterns: ["**/*.{js,css,html,woff2,ico,png,svg,json,mp3,ogg}"],
+            maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
+            navigateFallback: "/index.html",
+            runtimeCaching: [
+              {
+                urlPattern: ({ url }) => url.pathname === "/version.json",
+                handler: "NetworkOnly",
+              },
+              {
+                urlPattern: ({ sameOrigin }) => sameOrigin,
+                handler: "CacheFirst",
+                options: {
+                  cacheName: "static-assets",
+                  expiration: {
+                    maxAgeSeconds: 30 * 24 * 60 * 60,
+                  },
+                },
+              },
+            ],
+          },
+        })
+      : null,
     useSentry
       ? (sentryVitePlugin({
           authToken: env["SENTRY_AUTH_TOKEN"],
@@ -195,8 +206,7 @@ function getBuildOptions({
           ) {
             return `webfonts/[name]-[hash].${extType}`;
           }
-          // oxlint-disable-next-line no-deprecated
-          if (assetInfo.name === "misc.css") {
+          if (assetInfo.names[0] === "misc.css") {
             return `${extType}/vendor.[hash][extname]`;
           }
 

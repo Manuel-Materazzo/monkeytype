@@ -1,5 +1,13 @@
 {
-  "ignorePatterns": ["node_modules", "dist", "coverage", ".firebase", ".turbo"],
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    "dist-electron",
+    "release",
+    "coverage",
+    ".firebase",
+    ".turbo"
+  ],
   "extends": [
     "../packages/oxlint-config/index.jsonc"
     // "@monkeytype/oxlint-config"

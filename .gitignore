@@ -130,3 +130,7 @@ frontend/static/webfonts-preview
 
 .turbo
 frontend/.env.sentry-build-plugin
+
+# Electron
+frontend/dist-electron
+frontend/release

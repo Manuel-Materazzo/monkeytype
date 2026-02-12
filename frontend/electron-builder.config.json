@@ -1,0 +1,24 @@
+{
+  "appId": "com.monkeytype.desktop",
+  "productName": "Monkeytype",
+  "directories": {
+    "output": "release"
+  },
+  "files": ["dist/**/*", "dist-electron/**/*"],
+  "win": {
+    "target": ["nsis", "portable"],
+    "icon": "static/images/icons/general_icon_x512.png"
+  },
+  "mac": {
+    "target": ["dmg"],
+    "icon": "static/images/icons/general_icon_x512.png"
+  },
+  "linux": {
+    "target": ["AppImage", "deb"],
+    "icon": "static/images/icons/general_icon_x512.png"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true
+  }
+}

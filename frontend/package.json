@@ -3,6 +3,7 @@
   "private": true,
   "license": "GPL-3.0",
   "type": "module",
+  "main": "dist-electron/main.js",
   "scripts": {
     "lint": "oxlint . --type-aware --type-check && oxlint . -c .oxlintrc-plugin.json",
     "lint-fast": "oxlint .",
@@ -19,7 +20,10 @@
     "test-coverage": "vitest run --coverage",
     "dev-test": "concurrently --kill-others \"vite dev\" \"vitest\"",
     "tsc": "tsc",
-    "docker": "docker compose -f docker/compose.dev.yml up"
+    "docker": "docker compose -f docker/compose.dev.yml up",
+    "electron:compile": "tsc -p electron/tsconfig.json",
+    "electron:dev": "vite build --mode electron && tsc -p electron/tsconfig.json && electron dist-electron/main.js",
+    "electron:build": "vite build --mode electron && tsc -p electron/tsconfig.json && electron-builder --config electron-builder.config.json"
   },
   "dependencies": {
     "@date-fns/utc": "1.2.0",
@@ -83,6 +87,8 @@
     "@vitest/coverage-v8": "4.0.15",
     "autoprefixer": "10.4.20",
     "concurrently": "8.2.2",
+    "electron": "^36.3.1",
+    "electron-builder": "^26.0.12",
     "eslint": "9.39.1",
     "eslint-plugin-compat": "6.0.2",
     "eslint-plugin-solid": "0.14.5",
