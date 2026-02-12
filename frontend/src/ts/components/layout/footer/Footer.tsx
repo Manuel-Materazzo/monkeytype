@@ -1,6 +1,7 @@
-import { JSXElement } from "solid-js";
+import { JSXElement, Show } from "solid-js";
 
 import { getFocus, getIsScreenshotting } from "../../../signals/core";
+import { getInstallPrompt, triggerInstall } from "../../../signals/pwa";
 import { showModal } from "../../../stores/modals";
 import { cn } from "../../../utils/cn";
 import { Button } from "../../common/Button";
@@ -12,7 +13,7 @@ import { VersionButton } from "./VersionButton";
 export function Footer(): JSXElement {
   return (
     <footer
-      class={cn("text-sub relative text-xs", {
+      class={cn("relative text-xs text-sub", {
         "opacity-0": getIsScreenshotting(),
       })}
     >
@@ -24,7 +25,7 @@ export function Footer(): JSXElement {
           "opacity-0": getFocus(),
         }}
       >
-        <div class="xs:grid-cols-2 grid grid-cols-1 justify-items-start sm:grid-cols-4 lg:flex">
+        <div class="grid grid-cols-1 justify-items-start xs:grid-cols-2 sm:grid-cols-4 lg:flex">
           <Button
             type="text"
             text="contact"
@@ -99,6 +100,17 @@ export function Footer(): JSXElement {
               fixedWidth: true,
             }}
           />
+          <Show when={getInstallPrompt() !== null}>
+            <Button
+              type="text"
+              text="install"
+              fa={{
+                icon: "fa-download",
+                fixedWidth: true,
+              }}
+              onClick={() => triggerInstall()}
+            />
+          </Show>
         </div>
         <div class="flex flex-col items-end text-right lg:flex-row">
           <ThemeIndicator />
