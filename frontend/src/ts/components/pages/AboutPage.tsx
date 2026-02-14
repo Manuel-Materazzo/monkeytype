@@ -439,6 +439,4 @@ export function AboutPage(): JSXElement {
 function prefetch(): void {
   void queryClient.prefetchQuery(getContributorsQueryOptions());
   void queryClient.prefetchQuery(getSupportersQueryOptions());
-  void queryClient.prefetchQuery(getTypingStatsQueryOptions());
-  void queryClient.prefetchQuery(getSpeedHistogramQueryOptions());
 }

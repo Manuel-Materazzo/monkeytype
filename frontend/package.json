@@ -3,7 +3,7 @@
   "private": true,
   "license": "GPL-3.0",
   "type": "module",
-  "main": "dist-electron/main.js",
+  "main": "dist-electron/main.cjs",
   "scripts": {
     "lint": "oxlint . --type-aware --type-check && oxlint . -c .oxlintrc-plugin.json",
     "lint-fast": "oxlint .",
@@ -22,8 +22,8 @@
     "tsc": "tsc",
     "docker": "docker compose -f docker/compose.dev.yml up",
     "electron:compile": "tsc -p electron/tsconfig.json",
-    "electron:dev": "vite build --mode electron && tsc -p electron/tsconfig.json && electron dist-electron/main.js",
-    "electron:build": "vite build --mode electron && tsc -p electron/tsconfig.json && electron-builder --config electron-builder.config.json"
+    "electron:dev": "vite build --mode electron && npm run electron:compile && electron dist-electron/main.cjs",
+    "electron:build": "vite build --mode electron && npm run electron:compile && electron-builder --config electron-builder.config.json"
   },
   "dependencies": {
     "@date-fns/utc": "1.2.0",
