@@ -38,6 +38,7 @@ export const getTypingStatsQueryOptions = () =>
     queryKey: queryKeys.typingStats(),
     queryFn: fetchTypingStats,
     staleTime,
+    enabled: false,
   });
 
 // oxlint-disable-next-line typescript/explicit-function-return-type
@@ -46,6 +47,7 @@ export const getSpeedHistogramQueryOptions = () =>
     queryKey: queryKeys.speedHistogram(),
     queryFn: fetchSpeedHistogram,
     staleTime,
+    enabled: false,
   });
 
 async function fetchSpeedHistogram(): Promise<
