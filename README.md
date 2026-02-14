@@ -1,3 +1,41 @@
+# Monkeytype Offline
+
+This is a fork of [Monkeytype](https://monkeytype.com/) that removes the backend dependency so the typing test runs entirely on its own — no server, no account, no internet connection required. All tests, themes, languages, and settings are stored locally.
+
+## Why this fork?
+
+The original Monkeytype is a web application that depends on a backend server for features like accounts, leaderboards, and configuration syncing. That's great for the full experience, but sometimes you just want a fast, distraction-free typing test that works anywhere — on an air-gapped machine, behind a corporate firewall, or simply without relying on an external service.
+
+This fork strips away the backend dependency and can be used in multiple ways:
+
+- **As a static web app** — build the frontend and deploy it to any static hosting (GitHub Pages, Nginx, S3, etc.). No backend services needed; everything runs in the browser using local storage.
+- **As an installable PWA** — when served over HTTPS, the app registers a service worker that precaches all assets. Users can install it from the browser (an "install" button appears in the footer) and use it fully offline after the first visit.
+- **As a desktop app** — packaged with Electron as a standalone desktop application for Windows, macOS, and Linux.
+
+## Building
+
+```bash
+# Install dependencies (from the repo root)
+pnpm install
+
+# Launch the app for testing
+cd frontend
+npm run electron:dev
+
+# Package distributable installers
+npm run electron:build
+```
+
+Packaged installers are output to `frontend/release/`.
+
+| Platform | Formats                  |
+| -------- | ------------------------ |
+| Windows  | NSIS installer, portable |
+| macOS    | DMG                      |
+| Linux    | AppImage, deb            |
+
+---
+
 [![](https://github.com/monkeytypegame/monkeytype/blob/master/frontend/static/images/githubbanner2.png?raw=true)](https://monkeytype.com/)
 <br />
 
