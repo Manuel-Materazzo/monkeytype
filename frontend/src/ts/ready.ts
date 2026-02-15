@@ -6,7 +6,6 @@ import * as AccountButton from "./elements/account-button";
 //@ts-expect-error no types for this package
 import Konami from "konami";
 import * as ServerConfiguration from "./ape/server-configuration";
-import { getActiveFunboxesWithFunction } from "./test/funbox/list";
 import { configLoadPromise } from "./config";
 import { animate } from "animejs";
 import { onDOMReady, qs } from "./utils/dom";
@@ -20,10 +19,6 @@ onDOMReady(async () => {
     transition: "background .25s, transform .05s",
   });
   MerchBanner.showIfNotClosedBefore();
-
-  for (const fb of getActiveFunboxesWithFunction("applyGlobalCSS")) {
-    fb.functions.applyGlobalCSS();
-  }
 
   const app = document.querySelector("#app") as HTMLElement;
   app?.classList.remove("hidden");
@@ -47,7 +42,7 @@ onDOMReady(async () => {
   MonkeyPower.init();
 
   // untyped, need to ignore
-  // oxlint-disable-next-line no-unsafe-call
+  // oxlint-disable-next-line typescript-eslint/no-unsafe-call
   new Konami("https://keymash.io/");
 
   if (Misc.isDevEnvironment()) {
