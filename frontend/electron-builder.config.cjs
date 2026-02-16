@@ -6,6 +6,7 @@ module.exports = {
     output: "release",
   },
   files: ["dist/**/*", "dist-electron/**/*"],
+  publish: null,
   beforeBuild: () => {
     // Returning false tells electron-builder that node_modules are handled externally,
     // which skips the node module collector entirely. This prevents OOM errors caused by
