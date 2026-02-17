@@ -35,16 +35,37 @@ jobs:
         run: pnpm install
 
       - name: Build frontend for Electron
-        run: pnpm run build
-        working-directory: frontend
+        run: pnpm run build-fe
         env:
           VITE_MODE: electron
 
+      - name: Compile Electron main process
+        run: npm run electron:compile
+        working-directory: frontend
+
+      - name: Prepare electron app directory
+        working-directory: frontend
+        run: |
+          mkdir -p electron-app
+          cp -r dist electron-app/
+          cp -r dist-electron electron-app/
+          node -e "
+            const p = JSON.parse(require('fs').readFileSync('package.json', 'utf8'));
+            const pkg = {
+              name: 'monkeytype',
+              version: p.version,
+              main: p.main,
+              description: p.description || 'Monkeytype offline desktop app',
+              author: p.author,
+              homepage: 'https://github.com/Manuel-Materazzo/Monkeytype-offline'
+            };
+            require('fs').writeFileSync('electron-app/package.json', JSON.stringify(pkg, null, 2));
+          "
+
       - name: Build Electron app
-        run: npm run electron:build:full -- --${{ matrix.platform }}
+        run: node node_modules/electron-builder/cli.js build --config electron-builder.config.cjs --${{ matrix.platform }} --publish never
         working-directory: frontend
         env:
-          NODE_OPTIONS: "--max-old-space-size=8192"
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload artifacts
